@@ -1,26 +1,27 @@
 package de.daslaboratorium.machinelearning.classifier.bayes;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import de.daslaboratorium.machinelearning.classifier.Classification;
 import de.daslaboratorium.machinelearning.classifier.Classifier;
+
+import java.util.Collection;
+import java.util.Objects;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * A concrete implementation of the abstract Classifier class.  The Bayes
  * classifier implements a naive Bayes approach to classifying a given set of
  * features: classify(feat1,...,featN) = argmax(P(cat)*PROD(P(featI|cat)
  *
- * @author Philipp Nolte
- *
- * @see http://en.wikipedia.org/wiki/Naive_Bayes_classifier
- *
  * @param <T> The feature class.
  * @param <K> The category class.
+ * @author Philipp Nolte
+ * @see //en.wikipedia.org/wiki/Naive_Bayes_classifier
  */
 public class BayesClassifier<T, K> extends Classifier<T, K> {
+
+    private static final long serialVersionUID = 8423469846915407726L;
 
     /**
      * Calculates the product of all feature probabilities: PROD(P(featI|cat)
@@ -30,10 +31,11 @@ public class BayesClassifier<T, K> extends Classifier<T, K> {
      * @return The product of all feature probabilities.
      */
     private float featuresProbabilityProduct(Collection<T> features,
-            K category) {
+                                             K category) {
         float product = 1.0f;
-        for (T feature : features)
-            product *= this.featureWeighedAverage(feature, category);
+        for (T feature : features) {
+            product *= featureWeighedAverage(feature, category);
+        }
         return product;
     }
 
@@ -44,11 +46,11 @@ public class BayesClassifier<T, K> extends Classifier<T, K> {
      * @param features The set of features to use.
      * @param category The category to test for.
      * @return The probability that the features can be classified as the
-     *    category.
+     * category.
      */
     private float categoryProbability(Collection<T> features, K category) {
-        return ((float) this.getCategoryCount(category)
-                    / (float) this.getCategoriesTotal())
+        return ((float) getCategoryCount(category)
+                / (float) getCategoriesTotal())
                 * featuresProbabilityProduct(features, category);
     }
 
@@ -69,26 +71,20 @@ public class BayesClassifier<T, K> extends Classifier<T, K> {
          * achieve the desired functionality. A custom comparator is therefore
          * needed.
          */
-        SortedSet<Classification<T, K>> probabilities =
-                new TreeSet<Classification<T, K>>(
-                        new Comparator<Classification<T, K>>() {
 
-                    public int compare(Classification<T, K> o1,
-                            Classification<T, K> o2) {
-                        int toReturn = Float.compare(
-                                o1.getProbability(), o2.getProbability());
-                        if ((toReturn == 0)
-                                && !o1.getCategory().equals(o2.getCategory()))
-                            toReturn = -1;
-                        return toReturn;
+        return getCategories()
+                .stream()
+                .parallel()
+                .map(category -> new Classification<>(features, category, categoryProbability(features, category)))
+                .collect(Collectors.toCollection(() -> new TreeSet<>((o11, o21) -> {
+                    int toReturn1 = Float.compare(
+                            o11.getProbability(), o21.getProbability());
+                    if ((toReturn1 == 0)
+                            && !Objects.equals(o11.getCategory(), o21.getCategory())) {
+                        toReturn1 = -1;
                     }
-                });
-
-        for (K category : this.getCategories())
-            probabilities.add(new Classification<T, K>(
-                    features, category,
-                    this.categoryProbability(features, category)));
-        return probabilities;
+                    return toReturn1;
+                })));
     }
 
     /**
@@ -99,9 +95,9 @@ public class BayesClassifier<T, K> extends Classifier<T, K> {
     @Override
     public Classification<T, K> classify(Collection<T> features) {
         SortedSet<Classification<T, K>> probabilites =
-                this.categoryProbabilities(features);
+                categoryProbabilities(features);
 
-        if (probabilites.size() > 0) {
+        if (!probabilites.isEmpty()) {
             return probabilites.last();
         }
         return null;
@@ -115,7 +111,7 @@ public class BayesClassifier<T, K> extends Classifier<T, K> {
      */
     public Collection<Classification<T, K>> classifyDetailed(
             Collection<T> features) {
-        return this.categoryProbabilities(features);
+        return categoryProbabilities(features);
     }
 
 }

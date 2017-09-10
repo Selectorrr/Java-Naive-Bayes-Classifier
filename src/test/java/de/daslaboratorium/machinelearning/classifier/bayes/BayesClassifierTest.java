@@ -1,5 +1,11 @@
 package de.daslaboratorium.machinelearning.classifier.bayes;
 
+import de.daslaboratorium.machinelearning.classifier.Classification;
+import de.daslaboratorium.machinelearning.classifier.Classifier;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -7,13 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import de.daslaboratorium.machinelearning.classifier.Classification;
-import de.daslaboratorium.machinelearning.classifier.Classifier;
 
 public class BayesClassifierTest {
 
@@ -29,7 +28,7 @@ public class BayesClassifierTest {
          * and the context will be classified with a String according to the
          * featureset of the context.
          */
-        bayes = new BayesClassifier<String, String>();
+        bayes = new BayesClassifier<>();
 
         /*
          * The classifier can learn from classifications that are handed over to
@@ -61,7 +60,7 @@ public class BayesClassifierTest {
         Collection<Classification<String, String>> classifications = ((BayesClassifier<String, String>) bayes)
                 .classifyDetailed(Arrays.asList(unknownText1));
 
-        List<Classification<String, String>> list = new ArrayList<Classification<String, String>>(classifications);
+        List<Classification<String, String>> list = new ArrayList<>(classifications);
 
         Assert.assertEquals(CATEGORY_NEGATIVE, list.get(0).getCategory());
         Assert.assertEquals(0.0078125, list.get(0).getProbability(), EPSILON);

@@ -24,17 +24,17 @@ public class Classification<T, K> implements Serializable {
     /**
      * The classified featureset.
      */
-    private Collection<T> featureset;
+    private final Collection<T> featureset;
 
     /**
      * The category as which the featureset was classified.
      */
-    private K category;
+    private final K category;
 
     /**
      * The probability that the featureset belongs to the given category.
      */
-    private float probability;
+    private final float probability;
 
     /**
      * Constructs a new Classification with the parameters given and a default
@@ -80,7 +80,7 @@ public class Classification<T, K> implements Serializable {
      * @return
      */
     public float getProbability() {
-        return this.probability;
+        return probability;
     }
 
     /**
@@ -97,8 +97,8 @@ public class Classification<T, K> implements Serializable {
      */
     @Override
     public String toString() {
-        return "Classification [category=" + this.category + ", probability=" + this.probability + ", featureset="
-                + this.featureset + "]";
+        return "Classification [category=" + category + ", probability=" + probability + ", featureset="
+                + featureset + ']';
     }
 
 }

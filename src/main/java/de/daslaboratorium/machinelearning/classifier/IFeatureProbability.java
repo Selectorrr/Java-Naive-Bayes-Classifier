@@ -22,6 +22,6 @@ public interface IFeatureProbability<T, K> {
      *            the category to check the feature against
      * @return the probability <code>p(feature|category)</code>
      */
-    public float featureProbability(T feature, K category);
+    float featureProbability(T feature, K category);
 
 }
