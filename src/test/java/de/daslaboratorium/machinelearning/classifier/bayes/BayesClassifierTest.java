@@ -14,6 +14,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.is;
+
 public class BayesClassifierTest {
 
     private static final double EPSILON = 0.001;
@@ -48,8 +50,8 @@ public class BayesClassifierTest {
         final String[] unknownText1 = "today is a sunny day".split("\\s");
         final String[] unknownText2 = "there will be rain".split("\\s");
 
-        Assert.assertEquals(CATEGORY_POSITIVE, bayes.classify(Arrays.asList(unknownText1)).getCategory());
-        Assert.assertEquals(CATEGORY_NEGATIVE, bayes.classify(Arrays.asList(unknownText2)).getCategory());
+        Assert.assertThat(bayes.classify(Arrays.asList(unknownText1)).getCategory(), is(CATEGORY_POSITIVE));
+        Assert.assertThat(bayes.classify(Arrays.asList(unknownText2)).getCategory(), is(CATEGORY_NEGATIVE));
     }
 
     @Test
@@ -62,10 +64,10 @@ public class BayesClassifierTest {
 
         List<Classification<String, String>> list = new ArrayList<>(classifications);
 
-        Assert.assertEquals(CATEGORY_NEGATIVE, list.get(0).getCategory());
+        Assert.assertThat(list.get(0).getCategory(), is(CATEGORY_NEGATIVE));
         Assert.assertEquals(0.0078125, list.get(0).getProbability(), EPSILON);
 
-        Assert.assertEquals(CATEGORY_POSITIVE, list.get(1).getCategory());
+        Assert.assertThat(list.get(1).getCategory(), is(CATEGORY_POSITIVE));
         Assert.assertEquals(0.0234375, list.get(1).getProbability(), EPSILON);
     }
 

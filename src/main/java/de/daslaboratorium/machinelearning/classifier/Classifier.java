@@ -2,10 +2,9 @@ package de.daslaboratorium.machinelearning.classifier;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.Dictionary;
-import java.util.Enumeration;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
@@ -15,9 +14,12 @@ import java.util.Set;
  * basic probabilities – both category and feature probabilities. The classify
  * function has to be implemented by the concrete classifier class.
  *
- * @param <T> A feature class
- * @param <K> A category class
  * @author Philipp Nolte
+ *
+ * @param <T>
+ *            A feature class
+ * @param <K>
+ *            A category class
  */
 public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Serializable {
 
@@ -29,13 +31,13 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
     /**
      * Initial capacity of category dictionaries.
      */
-    private static final int INITIAL_CATEGORY_DICTIONARY_CAPACITY = 16;
+    private static final int INITIAL_CATEGORY_MAP_CAPACITY = 16;
 
     /**
      * Initial capacity of feature dictionaries. It should be quite big, because
      * the features will quickly outnumber the categories.
      */
-    private static final int INITIAL_FEATURE_DICTIONARY_CAPACITY = 32;
+    private static final int INITIAL_FEATURE_MAP_CAPACITY = 32;
 
     /**
      * The initial memory capacity or how many classifications are memorized.
@@ -43,20 +45,20 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
     private int memoryCapacity = 1000;
 
     /**
-     * A dictionary mapping features to their number of occurrences in each
+     * A Map mapping features to their number of occurrences in each
      * known category.
      */
-    private Dictionary<K, Dictionary<T, Integer>> featureCountPerCategory;
+    private Map<K, Map<T, Integer>> featureCountPerCategory;
 
     /**
-     * A dictionary mapping features to their number of occurrences.
+     * A Map mapping features to their number of occurrences.
      */
-    private Dictionary<T, Integer> totalFeatureCount;
+    private Map<T, Integer> totalFeatureCount;
 
     /**
-     * A dictionary mapping categories to their number of occurrences.
+     * A Map mapping categories to their number of occurrences.
      */
-    private Dictionary<K, Integer> totalCategoryCount;
+    private Map<K, Integer> totalCategoryCount;
 
     /**
      * The classifier's memory. It will forget old classifications as soon as
@@ -75,10 +77,10 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * Resets the <i>learned</i> feature and category counts.
      */
     public void reset() {
-        featureCountPerCategory = new Hashtable<>(
-                INITIAL_CATEGORY_DICTIONARY_CAPACITY);
-        totalFeatureCount = new Hashtable<>(INITIAL_FEATURE_DICTIONARY_CAPACITY);
-        totalCategoryCount = new Hashtable<>(INITIAL_CATEGORY_DICTIONARY_CAPACITY);
+        featureCountPerCategory = new HashMap<>(
+                INITIAL_CATEGORY_MAP_CAPACITY);
+        totalFeatureCount = new HashMap<>(INITIAL_FEATURE_MAP_CAPACITY);
+        totalCategoryCount = new HashMap<>(INITIAL_CATEGORY_MAP_CAPACITY);
         memoryQueue = new LinkedList<>();
     }
 
@@ -88,7 +90,7 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * @return The <code>Set</code> of features the classifier knows about.
      */
     public Set<T> getFeatures() {
-        return ((Hashtable<T, Integer>) totalFeatureCount).keySet();
+        return totalFeatureCount.keySet();
     }
 
     /**
@@ -97,7 +99,7 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * @return The <code>Set</code> of categories the classifier knows about.
      */
     public Set<K> getCategories() {
-        return ((Hashtable<K, Integer>) totalCategoryCount).keySet();
+        return totalCategoryCount.keySet();
     }
 
     /**
@@ -106,11 +108,9 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * @return The total category count.
      */
     public int getCategoriesTotal() {
-        int toReturn = 0;
-        for (Enumeration<Integer> e = totalCategoryCount.elements(); e.hasMoreElements(); ) {
-            toReturn += e.nextElement();
-        }
-        return toReturn;
+        return totalCategoryCount.values().stream().parallel()
+                                 .reduce((integer, integer2) -> integer + integer2)
+                                 .orElse(0);
     }
 
     /**
@@ -126,7 +126,8 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * Sets the memory's capacity. If the new value is less than the old value,
      * the memory will be truncated accordingly.
      *
-     * @param memoryCapacity The new memory capacity.
+     * @param memoryCapacity
+     *            The new memory capacity.
      */
     public void setMemoryCapacity(int memoryCapacity) {
         for (int i = this.memoryCapacity; i > memoryCapacity; i--) {
@@ -140,14 +141,16 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * equal to telling the classifier, that this feature has occurred in this
      * category.
      *
-     * @param feature  The feature, which count to increase.
-     * @param category The category the feature occurred in.
+     * @param feature
+     *            The feature, which count to increase.
+     * @param category
+     *            The category the feature occurred in.
      */
     public void incrementFeature(T feature, K category) {
-        Dictionary<T, Integer> features = featureCountPerCategory.get(category);
+        Map<T, Integer> features = featureCountPerCategory.get(category);
         if (features == null) {
             featureCountPerCategory.put(category,
-                    new Hashtable<>(INITIAL_FEATURE_DICTIONARY_CAPACITY));
+                    new HashMap<>(INITIAL_FEATURE_MAP_CAPACITY));
             features = featureCountPerCategory.get(category);
         }
         Integer count = features.get(feature);
@@ -169,7 +172,8 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * Increments the count of a given category. This is equal to telling the
      * classifier, that this category has occurred once more.
      *
-     * @param category The category, which count to increase.
+     * @param category
+     *            The category, which count to increase.
      */
     public void incrementCategory(K category) {
         Integer count = totalCategoryCount.get(category);
@@ -185,11 +189,13 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * equal to telling the classifier that this feature was classified once in
      * the category.
      *
-     * @param feature  The feature to decrement the count for.
-     * @param category The category.
+     * @param feature
+     *            The feature to decrement the count for.
+     * @param category
+     *            The category.
      */
     public void decrementFeature(T feature, K category) {
-        Dictionary<T, Integer> features = featureCountPerCategory.get(category);
+        Map<T, Integer> features = featureCountPerCategory.get(category);
         if (features == null) {
             return;
         }
@@ -221,7 +227,8 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * Decrements the count of a given category. This is equal to telling the
      * classifier, that this category has occurred once less.
      *
-     * @param category The category, which count to increase.
+     * @param category
+     *            The category, which count to increase.
      */
     public void decrementCategory(K category) {
         Integer count = totalCategoryCount.get(category);
@@ -239,12 +246,14 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * Retrieves the number of occurrences of the given feature in the given
      * category.
      *
-     * @param feature  The feature, which count to retrieve.
-     * @param category The category, which the feature occurred in.
+     * @param feature
+     *            The feature, which count to retrieve.
+     * @param category
+     *            The category, which the feature occurred in.
      * @return The number of occurrences of the feature in the category.
      */
     public int getFeatureCount(T feature, K category) {
-        Dictionary<T, Integer> features = featureCountPerCategory.get(category);
+        Map<T, Integer> features = featureCountPerCategory.get(category);
         if (features == null) {
             return 0;
         }
@@ -255,7 +264,8 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
     /**
      * Retrieves the total number of occurrences of the given feature.
      *
-     * @param feature The feature, which count to retrieve.
+     * @param feature
+     *            The feature, which count to retrieve.
      * @return The total number of occurences of the feature.
      */
     public int getFeatureCount(T feature) {
@@ -266,7 +276,8 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
     /**
      * Retrieves the number of occurrences of the given category.
      *
-     * @param category The category, which count should be retrieved.
+     * @param category
+     *            The category, which count should be retrieved.
      * @return The number of occurrences.
      */
     public int getCategoryCount(K category) {
@@ -294,13 +305,16 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * <code>0.5</code>. The probability defaults to the overall feature
      * probability.
      *
-     * @param feature  The feature, which probability to calculate.
-     * @param category The category.
-     * @return The weighed average probability.
      * @see Classifier#featureProbability(Object,
-     * Object)
+     *      Object)
      * @see Classifier#featureWeighedAverage(Object,
-     * Object, IFeatureProbability, float, float)
+     *      Object, IFeatureProbability, float, float)
+     *
+     * @param feature
+     *            The feature, which probability to calculate.
+     * @param category
+     *            The category.
+     * @return The weighed average probability.
      */
     public float featureWeighedAverage(T feature, K category) {
         return featureWeighedAverage(feature, category, null, 1.0f, 0.5f);
@@ -311,12 +325,16 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * overall weight of <code>1.0</code>, an assumed probability of
      * <code>0.5</code> and the given object to use for probability calculation.
      *
-     * @param feature    The feature, which probability to calculate.
-     * @param category   The category.
-     * @param calculator The calculating object.
-     * @return The weighed average probability.
      * @see Classifier#featureWeighedAverage(Object,
-     * Object, IFeatureProbability, float, float)
+     *      Object, IFeatureProbability, float, float)
+     *
+     * @param feature
+     *            The feature, which probability to calculate.
+     * @param category
+     *            The category.
+     * @param calculator
+     *            The calculating object.
+     * @return The weighed average probability.
      */
     public float featureWeighedAverage(T feature, K category, IFeatureProbability<T, K> calculator) {
         return featureWeighedAverage(feature, category, calculator, 1.0f, 0.5f);
@@ -327,13 +345,18 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * given weight and an assumed probability of <code>0.5</code> and the given
      * object to use for probability calculation.
      *
-     * @param feature    The feature, which probability to calculate.
-     * @param category   The category.
-     * @param calculator The calculating object.
-     * @param weight     The feature weight.
-     * @return The weighed average probability.
      * @see Classifier#featureWeighedAverage(Object,
-     * Object, IFeatureProbability, float, float)
+     *      Object, IFeatureProbability, float, float)
+     *
+     * @param feature
+     *            The feature, which probability to calculate.
+     * @param category
+     *            The category.
+     * @param calculator
+     *            The calculating object.
+     * @param weight
+     *            The feature weight.
+     * @return The weighed average probability.
      */
     public float featureWeighedAverage(T feature, K category, IFeatureProbability<T, K> calculator, float weight) {
         return featureWeighedAverage(feature, category, calculator, weight, 0.5f);
@@ -344,11 +367,16 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * given weight, the given assumed probability and the given object to use
      * for probability calculation.
      *
-     * @param feature            The feature, which probability to calculate.
-     * @param category           The category.
-     * @param calculator         The calculating object.
-     * @param weight             The feature weight.
-     * @param assumedProbability The assumed probability.
+     * @param feature
+     *            The feature, which probability to calculate.
+     * @param category
+     *            The category.
+     * @param calculator
+     *            The calculating object.
+     * @param weight
+     *            The feature weight.
+     * @param assumedProbability
+     *            The assumed probability.
      * @return The weighed average probability.
      */
     public float featureWeighedAverage(T feature, K category, IFeatureProbability<T, K> calculator, float weight,
@@ -373,33 +401,34 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * Train the classifier by telling it that the given features resulted in
      * the given category.
      *
-     * @param category The category the features belong to.
-     * @param features The features that resulted in the given category.
+     * @param category
+     *            The category the features belong to.
+     * @param features
+     *            The features that resulted in the given category.
      */
     public void learn(K category, Collection<T> features) {
-        learn(new Classification<T, K>(features, category));
+        learn(new Classification<>(features, category));
     }
 
     /**
      * Train the classifier by telling it that the given features resulted in
      * the given category.
      *
-     * @param classification The classification to learn.
+     * @param classification
+     *            The classification to learn.
      */
     public void learn(Classification<T, K> classification) {
 
-        classification
-                .getFeatureset()
-                .forEach(feature -> incrementFeature(feature, classification.getCategory()));
+        classification.getFeatureset()
+                      .forEach(feature -> incrementFeature(feature, classification.getCategory()));
         incrementCategory(classification.getCategory());
 
         memoryQueue.offer(classification);
         if (memoryQueue.size() > memoryCapacity) {
             Classification<T, K> toForget = memoryQueue.remove();
 
-            for (T feature : toForget.getFeatureset()) {
-                decrementFeature(feature, toForget.getCategory());
-            }
+            toForget.getFeatureset()
+                    .forEach(feature -> decrementFeature(feature, toForget.getCategory()));
             decrementCategory(toForget.getCategory());
         }
     }
@@ -408,7 +437,8 @@ public abstract class Classifier<T, K> implements IFeatureProbability<T, K>, Ser
      * The classify method. It will retrieve the most likely category for the
      * features given and depends on the concrete classifier implementation.
      *
-     * @param features The features to classify.
+     * @param features
+     *            The features to classify.
      * @return The category most likely.
      */
     public abstract Classification<T, K> classify(Collection<T> features);
